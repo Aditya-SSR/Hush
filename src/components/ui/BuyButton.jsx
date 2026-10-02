@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
@@ -16,12 +17,13 @@ import { useGSAP } from "@gsap/react";
  *   2. it scales up and inverts against the pill;
  *   3. the pill's own fill lifts from near-black to full black.
  *
- * Everything is hover/focus driven off one timeline so the states can't drift
- * apart, and `quickTo` is not needed here because these fire once per enter.
+ * Renders as a real link to the checkout so the destination is openable in a
+ * new tab, shareable, and crawlable — while the hover animation is identical.
  */
 export default function BuyButton({
   label = "Get H1",
   price = "$499",
+  href = "/checkout",
   className = "",
   onClick,
   ...attributes
@@ -70,9 +72,9 @@ export default function BuyButton({
   );
 
   return (
-    <button
+    <Link
       ref={root}
-      type="button"
+      href={href}
       onClick={onClick}
       className={`group pointer-events-auto inline-flex items-center gap-5 rounded-full bg-[#111111] py-2 pl-7 pr-2 text-white transition-colors duration-500 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5B6CFF] ${className}`}
       {...attributes}
@@ -109,6 +111,6 @@ export default function BuyButton({
           />
         </svg>
       </span>
-    </button>
+    </Link>
   );
 }
