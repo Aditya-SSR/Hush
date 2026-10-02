@@ -7,6 +7,34 @@ import dynamic from "next/dynamic";
 const SlideToOrder = dynamic(() => import("./SlideToOrder"), { ssr: false });
 
 /**
+ * Custom animations for the success popup and drawing the tick mark.
+ */
+const ANIMATION_STYLES = `
+  @keyframes draw-check {
+    0% { stroke-dasharray: 50; stroke-dashoffset: 50; }
+    100% { stroke-dasharray: 50; stroke-dashoffset: 0; }
+  }
+  @keyframes pop-in {
+    0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes fade-bg {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .animate-draw {
+    animation: draw-check 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    animation-delay: 0.15s;
+  }
+  .animate-pop {
+    animation: pop-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-fade {
+    animation: fade-bg 0.3s ease-out forwards;
+  }
+`;
+
+/**
  * Display type.
  */
 const H1 =
@@ -35,6 +63,8 @@ export default function Checkout() {
 
   return (
     <div className="min-h-svh bg-white">
+      <style>{ANIMATION_STYLES}</style>
+      
       <div className="mx-auto w-full max-w-2xl px-[max(1.25rem,5vw)] pb-[max(3rem,8vh)]">
         {/* Header */}
         <header className="flex items-center justify-between py-6 sm:py-8">
@@ -67,29 +97,6 @@ export default function Checkout() {
             thirty-day return window.
           </p>
         </div>
-
-        {placed && (
-          <div
-            role="status"
-            className="mb-8 flex items-start gap-3 rounded-2xl border border-neutral-900/10 bg-neutral-900/[0.03] px-5 py-4"
-          >
-            <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#5B6CFF]">
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <path
-                  d="M2.5 6.5L5 9l4.5-6"
-                  stroke="#fff"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <p className="font-sans text-[0.88rem] leading-[1.5] text-neutral-700">
-              <span className="font-medium text-neutral-900">Order H1-8842 placed.</span>{" "}
-              A confirmation is on its way to your inbox. Ships in 1–2 days.
-            </p>
-          </div>
-        )}
 
         {/* Summary Block */}
         <div className="flex flex-col">
@@ -163,6 +170,46 @@ export default function Checkout() {
           leave this page.
         </footer>
       </div>
+
+      {/* Success Popup Modal */}
+      {placed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/60 backdrop-blur-md animate-fade">
+          <div className="flex flex-col items-center max-w-sm w-full p-8 bg-white border border-neutral-900/10 rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] animate-pop">
+            
+            {/* Animated Tick Circle */}
+            <div className="relative flex items-center justify-center w-20 h-20 mb-6 bg-[#5B6CFF]/10 rounded-full">
+              <svg 
+                className="w-10 h-10 text-[#5B6CFF]" 
+                fill="none" 
+                viewBox="0 0 24 24"
+              >
+                <path
+                  className="animate-draw stroke-current stroke-[2.5]"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ strokeDasharray: "50", strokeDashoffset: "50" }}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            
+            <h3 className="font-display text-2xl font-medium tracking-[-0.02em] text-neutral-900 mb-2">
+              Order Confirmed
+            </h3>
+            
+            <p className="font-sans text-center text-[0.92rem] leading-relaxed text-neutral-500 mb-8">
+              Order <span className="font-medium text-neutral-900">H1-8842</span> has been placed. We&apos;ve sent a receipt to your email.
+            </p>
+            
+            <button
+              onClick={() => setPlaced(false)}
+              className="w-full py-4 px-6 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl font-display font-medium text-[0.95rem] transition-colors duration-200 active:scale-[0.98]"
+            >
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
