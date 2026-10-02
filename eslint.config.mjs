@@ -10,6 +10,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored runtime assets served straight to the browser: the Draco WASM
+    // decoder is third-party code we ship, not source we maintain.
+    "public/**",
   ]),
 ]);
 

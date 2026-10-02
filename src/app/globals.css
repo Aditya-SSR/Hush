@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Instrument Sans is the design's primary face — display and headings. */
+  --font-display: var(--font-instrument-sans);
+  /* Inter is reserved for the smallest supporting text. */
+  --font-sans: var(--font-inter);
+
+  /* HUSH electric blue, used only for small accents and interaction. */
+  --color-signal: #5b6cff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background-color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  /* Written by the Film timeline; defaulted here so the chrome never flashes
+     an unstyled value before the first frame. */
+  --hush-chapter: 1;
+  --hush-progress: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #171717;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #171717;
+  color: #ffffff;
+}
+
+/* Lenis owns the scroll position; native smooth scrolling would fight it. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
