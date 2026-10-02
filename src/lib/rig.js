@@ -32,6 +32,8 @@ export const rig = {
   /** Where the pointer has dragged the product to, in radians. */
   orbitTargetY: 0,
   orbitTargetX: 0,
+  /** Angular velocity of the flick, radians/second. Only while coasting. */
+  orbitVel: 0,
   /** 1 while the viewer is dragging, 0 otherwise. */
   grab: 0,
 };

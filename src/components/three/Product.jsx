@@ -90,17 +90,32 @@ function RigDriver() {
      * Viewer orbit.
      *
      * While dragging, the offset follows the pointer with a light lag so the
-     * product feels weighted rather than welded to the cursor. Once released it
-     * decays back to zero, which returns the product to exactly the pose the
-     * scroll timeline authored — the two never fight, because the orbit is an
-     * additive offset that is always heading back to identity.
+     * product feels weighted rather than welded to the cursor.
+     *
+     * On release it coasts: the flick's angular velocity carries the product a
+     * little further in the direction it was thrown, then both the velocity and
+     * the target decay back to zero. Without that inertia the product snapped
+     * straight back on release and the gesture read as one-directional — the
+     * product appeared to spin out but never settle back on its own axis.
      */
     if (rig.grab > 0) {
       rig.orbitY = damp(rig.orbitY, rig.orbitTargetY, 11, dt);
       rig.orbitX = damp(rig.orbitX, rig.orbitTargetX, 11, dt);
     } else {
-      rig.orbitY = damp(rig.orbitY, 0, 3.2, dt);
-      rig.orbitX = damp(rig.orbitX, 0, 3.2, dt);
+      // Coast, then bleed off.
+      rig.orbitTargetY += rig.orbitVel * dt;
+      rig.orbitVel *= Math.exp(-7 * dt);
+      if (Math.abs(rig.orbitVel) < 0.002) rig.orbitVel = 0;
+
+      // Ease the accumulated target home. Exponential, so it never overshoots
+      // and always returns to exactly the pose the timeline authored.
+      rig.orbitTargetY *= Math.exp(-2.4 * dt);
+      rig.orbitTargetX *= Math.exp(-2.4 * dt);
+      if (Math.abs(rig.orbitTargetY) < 0.0004) rig.orbitTargetY = 0;
+      if (Math.abs(rig.orbitTargetX) < 0.0004) rig.orbitTargetX = 0;
+
+      rig.orbitY = damp(rig.orbitY, rig.orbitTargetY, 6, dt);
+      rig.orbitX = damp(rig.orbitX, rig.orbitTargetX, 6, dt);
     }
 
     g.position.x = damp(g.position.x, rig.mx, k, dt);
