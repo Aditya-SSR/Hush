@@ -16,8 +16,22 @@ const AsciiWordmark = dynamic(() => import("./ui/AsciiWordmark"), {
  *
  * The panel is opaque black above the WebGL stage, which also does the useful
  * job of covering the product once the film is over.
+ *
+ * Desktop only — `mode === "mobile"` returns null instead of hiding with CSS.
+ * Two reasons:
+ *
+ *  1. The cutoff has to be the same MOBILE_BREAKPOINT (900px) that selects the
+ *     mobile film. A Tailwind `sm:`/`md:` prefix would disagree with it and
+ *     raise this panel over the middle of the mobile film at 700–900px.
+ *  2. Returning null keeps the ASCII canvas unmounted on the phones that are
+ *     worst placed to pay for it, rather than painting it off-screen.
+ *
+ * With the panel gone, a phone simply ends on the closing beat: product in
+ * hand, orbit armed, purchase moment on screen. Nothing is left uncovered.
  */
-export default function Footer() {
+export default function Footer({ mode = "desktop" }) {
+  if (mode === "mobile") return null;
+
   return (
     <footer className="relative z-10 flex h-[46svh] min-h-[340px] w-full flex-col justify-between overflow-hidden bg-[#08080a]">
       {/*
@@ -34,7 +48,7 @@ export default function Footer() {
         content is a different width.
       */}
       <div className="grid shrink-0 grid-cols-3 items-end gap-4 px-[max(1.25rem,3.5vw)] pb-[max(1.25rem,2.2vh)]">
-        <span className="justify-self-start font-sans text-[0.6rem] font-medium tracking-[0.24em] text-white/35 uppercase max-sm:hidden">
+        <span className="justify-self-start font-sans text-[0.6rem] font-medium tracking-[0.24em] text-white/35 uppercase">
           Silence, made visible.
         </span>
 
@@ -50,7 +64,7 @@ export default function Footer() {
           className="col-start-3 flex items-center justify-end gap-2 font-sans text-[0.68rem] font-medium tracking-[0.02em] text-white/60 transition-colors duration-300 hover:text-white focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5B6CFF]"
           aria-label="Aditya-SSR on GitHub"
         >
-          <span className="max-sm:hidden">Aditya-SSR</span>
+          <span>Aditya-SSR</span>
           <svg
             width="15"
             height="15"

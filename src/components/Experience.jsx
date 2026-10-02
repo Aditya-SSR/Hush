@@ -39,7 +39,7 @@ export default function Experience() {
           <Film mode={mode} onOrbitChange={setOrbit}>
             <Copy mode={mode} />
           </Film>
-          <Footer />
+          <Footer mode={mode} />
         </>
       ) : null}
 

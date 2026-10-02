@@ -28,8 +28,10 @@ export default function BuyButton({
   onClick,
   ...attributes
 }) {
+  // `root` and `pill` are the same node — the pill *is* the link. An earlier
+  // version kept a second ref for it that was never attached to anything, so
+  // the fill tween below had a null target and the pill never lifted.
   const root = useRef(null);
-  const pill = useRef(null);
   const arrow = useRef(null);
   const chip = useRef(null);
 
@@ -49,7 +51,7 @@ export default function BuyButton({
           ease: "back.out(2.2)",
         })
         .to(chip.current, { scale: 1.14, duration: 0.5, ease: "power3.out" }, 0)
-        .to(pill.current, { backgroundColor: "#000000", duration: 0.45, ease: "power2.out" }, 0);
+        .to(root.current, { backgroundColor: "#000000", duration: 0.45, ease: "power2.out" }, 0);
 
       const enter = () => tl.play();
       const leave = () => tl.reverse();
@@ -76,7 +78,12 @@ export default function BuyButton({
       ref={root}
       href={href}
       onClick={onClick}
-      className={`group pointer-events-auto inline-flex items-center gap-5 rounded-full bg-[#111111] py-2 pl-7 pr-2 text-white transition-colors duration-500 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5B6CFF] ${className}`}
+      // No `transition-colors` here. The only colour that changes on this
+      // element is the background, and GSAP owns it — a CSS transition on the
+      // same property chases GSAP's per-frame inline writes, which pinned the
+      // fill at its start colour for ~2.5s and then snapped it, so the hover
+      // read as broken.
+      className={`group pointer-events-auto inline-flex items-center gap-5 rounded-full bg-[#111111] py-2 pl-7 pr-2 text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5B6CFF] ${className}`}
       {...attributes}
     >
       <span className="font-display text-[0.82rem] font-medium tracking-[-0.005em]">
