@@ -38,6 +38,30 @@ export const rig = {
   grab: 0,
 };
 
+/**
+ * The rig's animated channels, grouped by what they mean to the eye.
+ *
+ * The film tweens each group on its own timing and ease (see Film.jsx) so a
+ * transition has an arc — the product turns first, then the body and camera
+ * follow — instead of every channel running one identical curve and passing
+ * through awkward in-between poses.
+ */
+export const RIG_GROUPS = {
+  rot: ["rx", "ry", "rz"],
+  pos: ["mx", "my", "mz"],
+  cam: ["cx", "cy", "cz"],
+  lens: ["s", "fov"],
+  exposure: ["exposure"],
+};
+
+/** The slice of a stop's rig values belonging to one channel group. */
+export function applyStopGroup(stop, group) {
+  const all = applyStop(stop);
+  const out = {};
+  for (const key of RIG_GROUPS[group]) out[key] = all[key];
+  return out;
+}
+
 export function applyStop(stop) {
   const { model, cam, exposure } = stop;
   return {

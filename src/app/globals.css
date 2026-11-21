@@ -18,7 +18,19 @@ html {
   /* Written by the Film timeline; defaulted here so the chrome never flashes
      an unstyled value before the first frame. */
   --hush-chapter: 1;
+  --hush-total: 0;
   --hush-progress: 0;
+}
+
+/*
+  Masked headline lines (SplitText `mask: "lines"`) clip to their own line box,
+  and a tight 1.04 line-height has no room for descenders or accents — they
+  would be sliced. Pad the mask and pull the padding back out with an equal
+  negative margin: the clip grows, the layout does not move.
+*/
+.hush-line-mask {
+  padding-block: 0.08em 0.18em;
+  margin-block: -0.08em -0.18em;
 }
 
 body {
@@ -54,4 +66,49 @@ html.lenis body {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/*
+  Loading curtain entrance. Pure CSS so it runs from the very first paint of
+  the server-rendered markup, before any JS has hydrated. `backwards` applies
+  the "from" frame during the delay and then hands control back to the element,
+  so the curtain's GSAP exit can drive the same properties afterwards.
+*/
+@keyframes hush-load-rise {
+  from {
+    transform: translate3d(0, 108%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hush-load-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes hush-load-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hush-load-word {
+  animation: hush-load-rise 1.05s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards;
+}
+
+.hush-load-rule {
+  animation: hush-load-draw 1.1s cubic-bezier(0.65, 0, 0.35, 1) 0.4s backwards;
+}
+
+.hush-load-count {
+  animation: hush-load-fade 0.9s ease-out 0.8s backwards;
 }

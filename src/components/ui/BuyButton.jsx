@@ -11,7 +11,8 @@ import { useGSAP } from "@gsap/react";
  * A dark pill: label, hairline divider, price, and a circular arrow chip that
  * lifts on hover. The arrow is the point of interaction, so it does the work —
  *
- *   1. it rotates ~45° so it points up-and-right, the direction of travel, and
+ *   1. it rests pointing right and rotates -45° so it points up-and-right, the
+ *      direction of travel, and
  *      slightly overshoots before settling (back.out), which is what sells the
  *      "premium" read rather than a plain spin;
  *   2. it scales up and inverts against the pill;
@@ -46,7 +47,7 @@ export default function BuyButton({
       const tl = gsap
         .timeline({ paused: true })
         .to(arrow.current, {
-          rotate: 45,
+          rotate: -45,
           duration: 0.7,
           ease: "back.out(2.2)",
         })
@@ -92,7 +93,7 @@ export default function BuyButton({
 
       <span aria-hidden="true" className="h-4 w-px bg-white/25" />
 
-      <span className="font-display text-[0.82rem] font-normal tracking-[-0.005em] text-white/70">
+      <span className="font-display text-[0.82rem] font-normal tracking-[-0.005em] text-white/70 tabular-nums">
         {price}
       </span>
 
@@ -107,10 +108,9 @@ export default function BuyButton({
           viewBox="0 0 15 15"
           fill="none"
           aria-hidden="true"
-          className="translate-x-[1px]"
         >
           <path
-            d="M3 12L12 3M12 3H5.5M12 3V9.5"
+            d="M2.5 7.5H12.5M8 3L12.5 7.5L8 12"
             stroke="#111111"
             strokeWidth="1.5"
             strokeLinecap="round"

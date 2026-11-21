@@ -40,6 +40,20 @@ export const REST = {
   exposure: 1.08,
 };
 
+/**
+ * Pacing for the comfort beat ("Made for hours, not moments.").
+ *
+ * The line is about time, so it is the one beat that is allowed to be slower
+ * than the rest: a longer, softer move in, a long rest, and a gentle leave.
+ * Numbers are multipliers on Film.jsx's TRAVEL / HOLD (see the pacing notes
+ * there); `linger` is the fraction of the NEXT move that the copy outlasts.
+ * Shared by the desktop and mobile films so both breathe the same way.
+ */
+const COMFORT_PACE = { travel: 1.35, hold: 1.8, ease: "sine.inOut" };
+/** The move out of comfort is small (a quarter-turn and a hair of scale), so it
+ * is eased softly and the comfort copy stays up for the first part of it. */
+const BUY_PACE = { ease: "sine.inOut", linger: 0.25 };
+
 export const STOPS = [
   {
     id: "intro",
@@ -53,12 +67,17 @@ export const STOPS = [
     ],
   },
   {
-    // Designed to disappear — the product turns to present its silhouette and
-    // construction. Product held right of frame, copy in the left gutter.
+    // Designed to disappear — one idea: the product turns a near-quarter to its
+    // side profile and the silhouette thins to a single line. A profile is much
+    // narrower than the front elevation, so it can sit right of centre with the
+    // copy in the left gutter without either crowding the other.
+    //
+    // Almost the whole move is yaw. Position barely changes (cam.x trails
+    // model.x), so the product turns in place rather than swinging across frame.
     id: "design",
     align: "left",
-    model: { x: 1.78, y: 0.34, z: 0, rx: -0.04, ry: -0.26, rz: 0.02, s: 0.98 },
-    cam: { x: 0.92, y: 0.12, z: 8.6, fov: 30 },
+    model: { x: 1.5, y: 0.0, z: 0, rx: -0.04, ry: -1.42, rz: 0, s: 1.14 },
+    cam: { x: 0.4, y: 0.1, z: 9, fov: 30 },
     exposure: 1.06,
     copy: [
       { text: "Designed to disappear.", tone: "lead" },
@@ -66,36 +85,47 @@ export const STOPS = [
     ],
   },
   {
-    // Every detail matters — raked onto the top of the headband so the rim,
-    // stitching and slider construction read as the subject.
+    // Every detail matters — a push-in on the right earcup, the high-detail,
+    // fully textured one (the left cup is a lighter flat-black mesh and would not
+    // survive this close). Cropped by the frame edge on purpose: the leather
+    // grain, the machined ring and the hinge are the whole subject.
     //
-    // The camera stays low on purpose. Raising it to "look down" partly cancels
-    // the model's own rx tip and the shot flattens back into a three-quarter
-    // view — the rotation has to come from the model, not the camera.
-    id: "sound",
-    align: "right",
-    model: { x: -2.02, y: 0.12, z: 0, rx: 1.14, ry: -0.3, rz: 0.04, s: 1.06 },
-    cam: { x: -1.02, y: 0.16, z: 8.2, fov: 27 },
-    exposure: 1.14,
+    // `measure` wraps the headline short of the product; at this scale the
+    // single-line headline would otherwise end a few pixels from the cushion.
+    id: "detail",
+    align: "left",
+    measure: "min(30rem,36vw)",
+    model: { x: 1.1, y: 0.0, z: 0, rx: 0.1, ry: -1.32, rz: 0, s: 1.3 },
+    cam: { x: 0, y: 0.1, z: 6.8, fov: 26 },
+    exposure: 1.08,
     copy: [
       { text: "Every detail matters.", tone: "lead" },
+      { text: "Stitched leather, machined rings, and nothing left to chance.", tone: "sub" },
+    ],
+  },
+  {
+    // Sound, composed — pulled back to a calm three-quarter view. The yaw opens
+    // the cushions to the camera, so the viewer looks into the cup where the
+    // sound actually happens. The copy stacks beneath, as in the comfort beat.
+    id: "sound",
+    align: "center",
+    model: { x: 0.2, y: 0.35, z: 0, rx: 0.22, ry: -0.55, rz: 0, s: 1.0 },
+    cam: { x: 0, y: 0.2, z: 9.4, fov: 30 },
+    exposure: 1.06,
+    copy: [
+      { text: "Sound, composed.", tone: "lead" },
       { text: "Rich, balanced sound built for the way you listen.", tone: "sub" },
     ],
   },
   {
-    // Leave the noise behind — the grandest shot in the film, and the one the
-    // whole sequence builds toward.
-    //
-    // Both earcups fill the frame dead-on and symmetric, cropped by the edges,
-    // headband disappearing out of the top. The camera stays square to the
-    // product (ry ~0) rather than turning it: the scale and the symmetry are
-    // what make it monumental. Held far right so the copy has the left third to
-    // itself without ever touching the product.
+    // Leave the noise behind — the space is the point. A symmetric front view,
+    // deliberately small, with a wide margin of white all round it: silence made
+    // visible. It lets the features chapter end on a breath before comfort.
     id: "silence",
-    align: "left",
-    model: { x: 2.45, y: -0.5, z: 0, rx: 0.02, ry: 0, rz: 0, s: 1.2 },
-    cam: { x: 1.28, y: -0.42, z: 6.2, fov: 26 },
-    exposure: 1.2,
+    align: "center",
+    model: { x: 0, y: 0.5, z: 0, rx: -0.02, ry: 0, rz: 0, s: 0.64 },
+    cam: { x: 0, y: 0.2, z: 9.8, fov: 30 },
+    exposure: 1.08,
     copy: [
       { text: "Leave the noise behind.", tone: "lead" },
       {
@@ -110,6 +140,7 @@ export const STOPS = [
     // is unchanged; only the framing moves.
     id: "comfort",
     align: "center",
+    ...COMFORT_PACE,
     model: { x: 0, y: 0.5, z: 0, rx: -0.14, ry: 0.34, rz: 0, s: 1.04 },
     cam: { x: 0, y: 0.14, z: 8.8, fov: 30 },
     exposure: 1.04,
@@ -123,6 +154,7 @@ export const STOPS = [
     // beneath it, nothing else on screen.
     id: "buy",
     align: "buy",
+    ...BUY_PACE,
     model: { x: 0, y: 0.52, z: 0, rx: -0.03, ry: 0, rz: 0, s: 1.0 },
     cam: { x: 0, y: 0.16, z: 9.1, fov: 30 },
     exposure: 1.1,
@@ -167,34 +199,36 @@ export const STOPS_MOBILE = [
   {
     id: "design",
     ...MOBILE_COMMON,
-    model: { x: 0, y: 0.44, z: 0, rx: -0.04, ry: -0.26, rz: 0.02, s: 0.9 },
-    cam: { x: 0, y: 0.1, z: 10.4, fov: 34 },
+    model: { x: 0, y: 0.4, z: 0, rx: -0.04, ry: -1.2, rz: 0, s: 0.95 },
     copy: STOPS[1].copy,
+  },
+  {
+    id: "detail",
+    ...MOBILE_COMMON,
+    // Dropped and eased back so the band clears the chapter marker in the
+    // top-left corner; the cup still bleeds off the left edge.
+    model: { x: -0.5, y: 0.02, z: 0, rx: 0, ry: -0.85, rz: 0, s: 1.1 },
+    cam: { x: 0, y: 0.1, z: 9.4, fov: 30 },
+    copy: STOPS[2].copy,
   },
   {
     id: "sound",
     ...MOBILE_COMMON,
-    // The raked top-down read survives on a phone, scaled back so the whole
-    // band still fits the narrower frame.
-    model: { x: 0, y: 0.42, z: 0, rx: 1.1, ry: -0.3, rz: 0.04, s: 0.82 },
-    cam: { x: 0, y: 0.16, z: 10.2, fov: 32 },
-    copy: STOPS[2].copy,
+    model: { x: 0, y: 0.5, z: 0, rx: 0.22, ry: -0.55, rz: 0, s: 0.85 },
+    copy: STOPS[3].copy,
   },
   {
     id: "silence",
     ...MOBILE_COMMON,
-    // Still the monumental symmetric shot, but pulled back and centred: on a
-    // portrait frame a side crop would just cut the product in half.
-    model: { x: 0, y: 0.2, z: 0, rx: 0.02, ry: 0, rz: 0, s: 0.86 },
-    cam: { x: 0, y: 0.02, z: 9.4, fov: 30 },
-    exposure: 1.2,
-    copy: STOPS[3].copy,
+    model: { x: 0, y: 1.0, z: 0, rx: -0.02, ry: 0, rz: 0, s: 0.6 },
+    copy: STOPS[4].copy,
   },
   {
     id: "comfort",
     ...MOBILE_COMMON,
+    ...COMFORT_PACE,
     model: { x: 0, y: 0.46, z: 0, rx: -0.14, ry: 0.34, rz: 0, s: 0.88 },
-    copy: STOPS[4].copy,
+    copy: STOPS[5].copy,
   },
   {
     // The buy stop is shared with desktop in every respect except the camera's
@@ -207,9 +241,9 @@ export const STOPS_MOBILE = [
     // optical size it has on desktop without touching the pose, and leaves the
     // room below for the wordmark, price and footer.
     id: "buy",
-    ...STOPS[5],
-    model: { ...STOPS[5].model, s: 0.86, y: 0.66 },
-    cam: { ...STOPS[5].cam, z: 9.6, fov: 42 },
+    ...STOPS[6],
+    model: { ...STOPS[6].model, s: 0.86, y: 0.66 },
+    cam: { ...STOPS[6].cam, z: 9.6, fov: 42 },
   },
 ];
 

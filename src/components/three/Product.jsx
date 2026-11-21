@@ -67,11 +67,20 @@ function Headphone() {
 }
 
 /**
+ * Follow rates (1/seconds) for the damped approach to the rig, per channel.
+ *
+ * The timeline already choreographs each move, and Lenis + a short scrub sit
+ * upstream, so this layer only needs to take the last bit of edge off: a time
+ * constant of roughly 0.12-0.15s. It tracks the scroll tightly and settles well
+ * inside a hold, while still giving the weighted, un-robotic arrival. Camera is
+ * a touch slower than the product so the world trails the object slightly.
+ */
+const FOLLOW = { rot: 8, pos: 7.5, cam: 7, lens: 8, exposure: 5 };
+
+/**
  * Drives the scene from the GSAP-authored `rig` values.
  *
- * ScrollTrigger scrubs `rig`; this loop damps the live scene toward it. That
- * second layer of damping is what gives the film its weight — the product
- * glides into each mark instead of snapping to it.
+ * ScrollTrigger scrubs `rig`; this loop damps the live scene toward it.
  */
 function RigDriver() {
   const pivot = useRef(null);
@@ -83,8 +92,10 @@ function RigDriver() {
 
     const { camera, gl } = state;
 
-    const k = 3.4;
-    const dt = Math.min(delta, 0.05);
+    // Frame-rate independent (THREE.damp is exponential in dt). The clamp only
+    // guards against a huge first frame or a tab-resume spike; 0.1s still lets
+    // the product arrive on a slow frame instead of crawling in slow motion.
+    const dt = Math.min(delta, 0.1);
 
     /**
      * Viewer orbit.
@@ -118,30 +129,30 @@ function RigDriver() {
       rig.orbitX = damp(rig.orbitX, rig.orbitTargetX, 6, dt);
     }
 
-    g.position.x = damp(g.position.x, rig.mx, k, dt);
-    g.position.y = damp(g.position.y, rig.my, k, dt);
-    g.position.z = damp(g.position.z, rig.mz, k, dt);
+    g.position.x = damp(g.position.x, rig.mx, FOLLOW.pos, dt);
+    g.position.y = damp(g.position.y, rig.my, FOLLOW.pos, dt);
+    g.position.z = damp(g.position.z, rig.mz, FOLLOW.pos, dt);
 
-    g.rotation.x = damp(g.rotation.x, rig.rx + rig.orbitX, k, dt);
-    g.rotation.y = damp(g.rotation.y, rig.ry + rig.orbitY, k, dt);
-    g.rotation.z = damp(g.rotation.z, rig.rz, k, dt);
+    g.rotation.x = damp(g.rotation.x, rig.rx + rig.orbitX, FOLLOW.rot, dt);
+    g.rotation.y = damp(g.rotation.y, rig.ry + rig.orbitY, FOLLOW.rot, dt);
+    g.rotation.z = damp(g.rotation.z, rig.rz, FOLLOW.rot, dt);
 
-    const s = damp(g.scale.x, rig.s, k, dt);
+    const s = damp(g.scale.x, rig.s, FOLLOW.lens, dt);
     g.scale.setScalar(s);
 
-    camera.position.x = damp(camera.position.x, rig.cx, k, dt);
-    camera.position.y = damp(camera.position.y, rig.cy, k, dt);
-    camera.position.z = damp(camera.position.z, rig.cz, k, dt);
+    camera.position.x = damp(camera.position.x, rig.cx, FOLLOW.cam, dt);
+    camera.position.y = damp(camera.position.y, rig.cy, FOLLOW.cam, dt);
+    camera.position.z = damp(camera.position.z, rig.cz, FOLLOW.cam, dt);
 
     if (Math.abs(camera.fov - rig.fov) > 0.001) {
-      camera.fov = damp(camera.fov, rig.fov, k, dt);
+      camera.fov = damp(camera.fov, rig.fov, FOLLOW.lens, dt);
       camera.updateProjectionMatrix();
     }
 
     gl.toneMappingExposure = damp(
       gl.toneMappingExposure,
       rig.exposure,
-      k,
+      FOLLOW.exposure,
       dt,
     );
 

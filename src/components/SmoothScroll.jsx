@@ -32,13 +32,14 @@ export default function SmoothScroll() {
     }
 
     const lenis = new Lenis({
-      duration: 1.15,
-      // Exponential ease-out: long, decelerating tail so the product eases into
-      // each stop instead of stopping dead.
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      wheelMultiplier: 0.9,
+      // Lerp mode (duration/easing are ignored when lerp is set, so they are not
+      // given). 0.12 per frame is a ~0.1s time constant: scroll feels weighty
+      // and smooth but the product stays in step with the hand. It is the
+      // first of three short smoothing layers (see Film.jsx); the earlier
+      // 0.09 + 1.15s stack made the product trail the scroll by ~2s.
+      lerp: 0.12,
+      wheelMultiplier: 1,
       touchMultiplier: 1.6,
-      lerp: 0.09,
       smoothWheel: true,
       autoRaf: false,
     });

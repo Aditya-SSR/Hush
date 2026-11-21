@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
 const ARMED_AT = 0.86;
 const COMMIT_AT = 0.965;
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /**
  * Slide to order.
@@ -34,6 +38,9 @@ export default function SlideToOrder({ onComplete }) {
   const fill = useRef(null);
   const ring = useRef(null);
   const tick = useRef(null);
+  const line = useRef(null);
+  const handoff = useRef(null);
+  const hintId = useId();
 
   const [armed, setArmed] = useState(false);
   const [placed, setPlaced] = useState(false);
@@ -46,10 +53,13 @@ export default function SlideToOrder({ onComplete }) {
   /** Puts the control back to rest after a failed slide. */
   const springBack = () => {
     const s = state.current;
+    const reduced = prefersReducedMotion();
+    // A second release while the first is still settling must not stack tweens.
+    gsap.killTweensOf(s);
     gsap.to(s, {
       progress: 0,
-      duration: 0.55,
-      ease: "elastic.out(1, 0.55)",
+      duration: reduced ? 0.2 : 0.55,
+      ease: reduced ? "power2.out" : "elastic.out(1, 0.55)",
       onUpdate: () => paint(s.progress),
       onComplete: () => {
         paint(0);
@@ -66,7 +76,9 @@ export default function SlideToOrder({ onComplete }) {
    * partial slide would animate home while `aria-valuenow` stayed frozen at the
    * value it held when the finger lifted.
    */
-  const paint = (progress) => {
+  const paint = (progress = state.current.progress) => {
+    // Called with no argument for the initial paint. Without the default the
+    // progress was `undefined`, which put NaN into aria-valuenow.
     state.current.progress = progress;
     const travel = Math.max(
       1,
@@ -74,6 +86,8 @@ export default function SlideToOrder({ onComplete }) {
     );
     thumb.current.style.transform = `translate3d(${progress * travel}px, 0, 0)`;
     fill.current.style.transform = `scaleX(${progress})`;
+    // Drives the resting label: it dissolves as the thumb travels over it.
+    root.current.style.setProperty("--p", progress.toFixed(3));
 
     // Guarded, so an animation frame only re-renders when the value a screen
     // reader would announce actually changes.
@@ -88,6 +102,22 @@ export default function SlideToOrder({ onComplete }) {
 
     const s = state.current;
     const travel = track.current.clientWidth - thumb.current.offsetWidth;
+
+    const reduced = prefersReducedMotion();
+
+    // Give the confirmation on the track a moment to land before the dialog
+    // takes over the screen; calling onComplete instantly buried it.
+    handoff.current = gsap.delayedCall(reduced ? 0.25 : 1.15, () => onComplete?.());
+
+    if (reduced) {
+      gsap.set(thumb.current, { autoAlpha: 0 });
+      gsap.set(track.current, { backgroundColor: "#0a0a0a" });
+      gsap.set([".slide-label-hold", ".slide-label-release"], { autoAlpha: 0 });
+      gsap.set(".slide-success", { autoAlpha: 1 });
+      gsap.set(".slide-success-mark, .slide-success-text", { autoAlpha: 1 });
+      fill.current.style.transform = "scaleX(1)";
+      return null;
+    }
 
     const tl = gsap.timeline();
 
@@ -155,8 +185,6 @@ export default function SlideToOrder({ onComplete }) {
     drawRing(ring.current, 0.24);
     drawRing(tick.current, 0.52);
 
-    onComplete?.();
-
     return tl;
   };
 
@@ -215,6 +243,12 @@ export default function SlideToOrder({ onComplete }) {
       }
     };
 
+    // Tabbing away mid-slide would otherwise leave the thumb parked armed.
+    const onBlurTrack = () => {
+      const s = state.current;
+      if (!s.active && s.progress > 0 && !placed) springBack();
+    };
+
     const onKeyDown = (e) => {
       if (placed) return;
       const s = state.current;
@@ -244,8 +278,10 @@ export default function SlideToOrder({ onComplete }) {
     window.addEventListener("pointercancel", onUp);
     window.addEventListener("blur", onUp);
     el.addEventListener("keydown", onKeyDown);
+    el.addEventListener("focusout", onBlurTrack);
 
     return () => {
+      el.removeEventListener("focusout", onBlurTrack);
       el.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
@@ -256,11 +292,23 @@ export default function SlideToOrder({ onComplete }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placed]);
 
-  // Exactly one resting label is visible at a time, and neither survives the
-  // commit, so the success overlay ends up owning the track. Computed here so
-  // the two spans cannot drift out of step with each other.
-  const showHold = !armed && !placed;
+  // The "Release" label swaps in once armed; the resting label fades with the
+  // drag itself (see `--p`). Neither survives the commit, so the success
+  // overlay ends up owning the track.
   const showRelease = armed && !placed;
+
+  // Rise the confirmation line in once it exists.
+  useEffect(() => {
+    if (!placed || !line.current || prefersReducedMotion()) return;
+    gsap.fromTo(
+      line.current,
+      { autoAlpha: 0, y: 6 },
+      { autoAlpha: 1, y: 0, duration: 0.5, delay: 0.5, ease: "power2.out" },
+    );
+  }, [placed]);
+
+  // A pending handoff must not fire into an unmounted page.
+  useEffect(() => () => handoff.current?.kill(), []);
 
   // Initial paint once fonts have settled and the track has a width.
   useGSAP(
@@ -276,15 +324,6 @@ export default function SlideToOrder({ onComplete }) {
     // happily sweep a text selection through the labels and confirmation line
     // sitting under the thumb, which reads as a glitch on release.
     <div ref={root} className="relative w-full select-none">
-      {placed && (
-        <p
-          aria-live="polite"
-          className="slide-success-text mt-4 text-center font-display text-[0.95rem] font-medium tracking-[-0.01em] text-neutral-900"
-        >
-          Order placed — confirmation sent to your email.
-        </p>
-      )}
-
       <div
         ref={track}
         role="slider"
@@ -293,6 +332,10 @@ export default function SlideToOrder({ onComplete }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
+        aria-valuetext={
+          placed ? "Order placed" : armed ? "Release to order" : `${percent} percent`
+        }
+        aria-describedby={hintId}
         aria-disabled={placed}
         className="relative flex h-[64px] w-full touch-none items-center overflow-hidden rounded-full bg-neutral-900/[0.06] outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-[#5B6CFF] focus-visible:ring-offset-4 focus-visible:ring-offset-white sm:h-[72px]"
       >
@@ -305,7 +348,8 @@ export default function SlideToOrder({ onComplete }) {
 
         {/* Resting labels. Only the relevant one is visible at a time. */}
         <span
-          className={`slide-label-hold pointer-events-none absolute inset-0 flex items-center justify-center font-display text-[0.82rem] font-medium tracking-[0.16em] text-neutral-500 uppercase ${showHold ? "opacity-100" : "opacity-0"}`}
+          style={{ opacity: "max(0, calc(1 - var(--p, 0) * 1.7))" }}
+          className="slide-label-hold pointer-events-none absolute inset-0 flex items-center justify-center font-display text-[0.82rem] font-medium tracking-[0.16em] text-neutral-500 uppercase"
         >
           Slide to order
         </span>
@@ -367,6 +411,20 @@ export default function SlideToOrder({ onComplete }) {
           </svg>
         </div>
       </div>
+
+      <span id={hintId} className="sr-only">
+        Drag right to place your order, or press Enter.
+      </span>
+
+      {/* Always mounted so the live region is registered before it speaks. */}
+      <p
+        ref={line}
+        aria-live="polite"
+        className="mt-4 min-h-6 text-center font-display text-[0.95rem] font-medium tracking-[-0.01em] text-neutral-900"
+        style={placed ? undefined : { opacity: 0 }}
+      >
+        {placed ? "Order placed. Confirmation sent to your email." : ""}
+      </p>
     </div>
   );
 }

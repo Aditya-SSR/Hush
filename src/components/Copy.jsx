@@ -1,6 +1,7 @@
 "use client";
 
 import { STOPS, STOPS_MOBILE } from "@/lib/stops";
+import { isMaskedTone } from "@/lib/textMotion";
 import Line from "./ui/Line";
 import BuyButton from "./ui/BuyButton";
 
@@ -19,10 +20,14 @@ const ALIGN = {
  * copy and product share the frame without ever overlapping.
  */
 const POSITION = {
-  center: "inset-x-0 bottom-[7vh] px-6",
-  left: "inset-y-0 left-0 flex w-full justify-center px-6 py-[22vh] pl-[max(1.5rem,6vw)] sm:w-[52%] sm:py-0",
-  right: "inset-y-0 right-0 flex w-full justify-center px-6 py-[22vh] pr-[max(1.5rem,6vw)] sm:w-[52%] sm:py-0",
-  buy: "inset-x-0 bottom-[7vh] justify-end px-6",
+  center:
+    "inset-x-0 bottom-[max(7vh,calc(env(safe-area-inset-bottom)_+_1.5rem))] px-6",
+  // pb lifts the column's centre a few vh above geometric centre: type sits
+  // optically centred when it rides slightly high, not dead-middle.
+  left: "inset-y-0 left-0 flex w-[52%] justify-center py-0 pb-[8vh] pl-[max(1.5rem,6vw)] pr-6",
+  right:
+    "inset-y-0 right-0 flex w-[52%] justify-center py-0 pb-[8vh] pr-[max(1.5rem,6vw)] pl-6",
+  buy: "inset-x-0 bottom-[max(7vh,calc(env(safe-area-inset-bottom)_+_1.5rem))] justify-end px-6",
 };
 
 /**
@@ -33,8 +38,9 @@ const POSITION = {
  * for it.
  */
 const POSITION_MOBILE = {
-  center: "inset-x-0 bottom-[8vh] px-6",
-  buy: "inset-x-0 bottom-[6vh] justify-end px-6",
+  center:
+    "inset-x-0 bottom-[max(8vh,calc(env(safe-area-inset-bottom)_+_1.5rem))] px-6",
+  buy: "inset-x-0 bottom-[max(6vh,calc(env(safe-area-inset-bottom)_+_1.5rem))] justify-end px-6",
 };
 
 /**
@@ -49,10 +55,12 @@ const POSITION_MOBILE = {
  * same sequence, not a separate page-level moment.
  */
 const TONE = {
-  lead: "font-display text-[clamp(1.9rem,4.6vw,4.1rem)] font-medium leading-[1.04] tracking-[-0.035em] text-neutral-900",
-  sub: "font-sans mt-[1.15em] inline-block max-w-[28ch] text-[clamp(0.95rem,1.15vw,1.15rem)] leading-[1.55] tracking-[-0.005em] text-neutral-500",
+  // `text-balance` evens out headline lines so a wrap never strands one word;
+  // `text-pretty` does the same job for the sub copy without reshaping it.
+  lead: "font-display text-[clamp(1.9rem,4.6vw,4.1rem)] font-medium leading-[1.04] tracking-[-0.035em] text-balance text-neutral-900",
+  sub: "font-sans mt-[1.15em] inline-block max-w-[28ch] text-[clamp(0.95rem,1.15vw,1.15rem)] leading-[1.55] tracking-[-0.005em] text-pretty text-neutral-500",
   wordmark:
-    "font-display text-[clamp(1.9rem,4.6vw,4.1rem)] font-medium leading-[1.04] tracking-[-0.035em] text-neutral-900",
+    "font-display text-[clamp(1.9rem,4.6vw,4.1rem)] font-medium leading-[1.04] tracking-[-0.035em] text-balance text-neutral-900",
   // No top margin of its own: the wordmark block's flex gap handles the
   // rhythm, and stacking both left a visible hole under the heading.
   tagline:
@@ -67,39 +75,45 @@ function CopyBlock({ stop, index, isMobile }) {
     ? POSITION_MOBILE.center
     : POSITION[stop.align];
 
-  // The silence beat frames the product so large that a full gutter column
-  // would run underneath it. Constrain the measure there so the headline
-  // wraps short of the product instead of colliding with it.
-  const narrow = stop.id === "silence" && !isMobile;
+  // Beats whose product crowds the gutter (e.g. a monumental close-up) can
+  // declare a narrower column in art direction: `stop.measure`, any CSS
+  // max-width. Desktop only — mobile always uses its own single column.
+  const measure = !isMobile && stop.measure ? stop.measure : undefined;
 
   return (
     <div
       data-copy={index}
-      className={`pointer-events-none absolute flex flex-col opacity-0 will-change-transform ${isSide ? "justify-center" : "justify-end"} ${ALIGN[isMobile ? "center" : stop.align]} ${position}`}
+      // Hidden by CSS (`invisible opacity-0`) so nothing is selectable or
+      // flashes before the copy director first reveals it; the director then
+      // owns visibility through autoAlpha.
+      className={`pointer-events-none invisible absolute flex flex-col opacity-0 ${isSide ? "justify-center" : "justify-end"} ${ALIGN[isMobile ? "center" : stop.align]} ${position}`}
     >
       <div
-        className={`${isWordmark ? "flex flex-col items-center gap-3" : ""} ${narrow ? "max-w-[min(30rem,42vw)]" : ""} ${isMobile ? "max-w-[34rem]" : ""}`}
+        style={measure ? { maxWidth: measure } : undefined}
+        className={`${isWordmark ? "flex flex-col items-center gap-3" : ""} ${isMobile ? "max-w-[34rem]" : ""}`}
       >
         {stop.copy.map((line, i) => (
-          <span key={line.text} className="block overflow-hidden">
+          <span key={line.text} className="block">
             {/*
-              `Line` registers its split lines against `beat-{index}-{i}` so the
-              film timeline can tween the real elements rather than re-querying
-              the DOM. It only prepares the masked, hidden start state — the
-              tween itself belongs to the scrubbed timeline, which is what makes
-              the reveal reverse when you scroll back up.
+              `Line` splits the text and registers its lines against
+              `beat-{index}-{i}`; the copy director plays them by time. Only
+              headline tones are masked — soft copy fades and drifts, which a
+              clip mask would cut off. No overflow-hidden here: the mask's own
+              padding (see globals.css) protects descenders and this wrapper
+              would clip it.
             */}
-            <Line registryKey={`beat-${index}-${i}`}>
-              <span className={`block will-change-transform ${TONE[line.tone]}`}>
-                {line.text}
-              </span>
+            <Line
+              registryKey={`beat-${index}-${i}`}
+              mask={isMaskedTone(line.tone)}
+            >
+              <span className={`block ${TONE[line.tone]}`}>{line.text}</span>
             </Line>
           </span>
         ))}
 
         {isWordmark && (
           <>
-            <span className="pointer-events-auto block">
+            <span data-reveal="cta" className="pointer-events-auto block">
               <BuyButton />
             </span>
 
@@ -108,6 +122,7 @@ function CopyBlock({ stop, index, isMobile }) {
               way to know the product can be turned.
             */}
             <span
+              data-reveal="hint"
               data-hint
               className="mt-5 block font-sans text-[0.6rem] font-medium tracking-[0.24em] text-neutral-400 uppercase"
             >
@@ -124,7 +139,7 @@ function CopyBlock({ stop, index, isMobile }) {
  * The typography layer.
  *
  * Sits above the canvas as a fixed overlay. Every block is stacked in the same
- * place and cross-faded by the master timeline, so the product is never
+ * place and shown and hidden by the copy director, so the product is never
  * occluded by copy that belongs to a different beat.
  */
 export default function Copy({ mode = "desktop" }) {

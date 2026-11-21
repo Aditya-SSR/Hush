@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
 const SlideToOrder = dynamic(() => import("./SlideToOrder"), { ssr: false });
 
 /**
- * Custom animations for the success popup and drawing the tick mark.
+ * Custom animations for the page entrance, the confirmation dialog and the
+ * tick mark. Transform and opacity only; all of it is switched off for
+ * `prefers-reduced-motion`.
  */
 const ANIMATION_STYLES = `
   @keyframes draw-check {
@@ -22,6 +24,10 @@ const ANIMATION_STYLES = `
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
+  @keyframes rise {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
   .animate-draw {
     animation: draw-check 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
     animation-delay: 0.15s;
@@ -31,6 +37,14 @@ const ANIMATION_STYLES = `
   }
   .animate-fade {
     animation: fade-bg 0.3s ease-out forwards;
+  }
+  .rise {
+    animation: rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rise, .animate-pop, .animate-fade { animation: none !important; }
+    .animate-draw { animation: none !important; stroke-dashoffset: 0 !important; }
   }
 `;
 
@@ -59,17 +73,36 @@ function ProductMark() {
 }
 
 export default function Checkout() {
-  const [placed, setPlaced] = useState(false);
+  const [open, setOpen] = useState(false);
+  const cta = useRef(null);
+
+  // The slider plays its own confirmation first, then hands over to the dialog.
+  const handleComplete = () => setOpen(true);
+
+  useEffect(() => {
+    if (!open) return;
+    cta.current?.focus();
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <div className="min-h-svh bg-white">
       <style>{ANIMATION_STYLES}</style>
-      
-      <div className="mx-auto w-full max-w-2xl px-[max(1.25rem,5vw)] pb-[max(3rem,8vh)]">
+
+      {/* `inert` keeps keyboard and screen-reader focus inside the dialog. */}
+      <main
+        inert={open}
+        className="mx-auto w-full max-w-2xl px-[max(1.25rem,5vw)] pb-[max(3rem,8vh)]"
+      >
         {/* Header */}
-        <header className="flex items-center justify-between py-6 sm:py-8">
+        <header className="py-6 sm:py-8">
           <Link
             href="/"
+            aria-label="Back to Hush H1"
             className="font-sans inline-flex items-center gap-2 text-[0.68rem] font-medium tracking-[0.24em] text-neutral-500 uppercase transition-colors duration-300 hover:text-neutral-900 focus-visible:text-neutral-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5B6CFF]"
           >
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -83,24 +116,19 @@ export default function Checkout() {
             </svg>
             Hush H1
           </Link>
-
-          <span className="font-sans text-[0.62rem] font-medium tracking-[0.24em] text-neutral-400 uppercase">
-            Checkout
-          </span>
         </header>
 
         {/* Title */}
-        <div className="pt-6 pb-10 sm:pt-10 sm:pb-14">
+        <div className="rise pt-6 pb-10 sm:pt-10 sm:pb-14" style={{ "--i": 0 }}>
           <h1 className={H1}>Checkout</h1>
           <p className="font-sans mt-3 max-w-[42ch] text-[0.98rem] leading-[1.55] tracking-[-0.005em] text-neutral-500">
-            Adaptive noise cancelling over-ear. Free two-day shipping and a
-            thirty-day return window.
+            Review your order, then slide to confirm.
           </p>
         </div>
 
         {/* Summary Block */}
         <div className="flex flex-col">
-          <div className="flex items-start gap-4 sm:gap-5">
+          <div className="rise flex items-start gap-4 sm:gap-5" style={{ "--i": 1 }}>
             <ProductMark />
 
             <div className="min-w-0 flex-1 pt-1">
@@ -115,12 +143,15 @@ export default function Checkout() {
               </p>
             </div>
 
-            <p className="font-display shrink-0 text-[1.05rem] font-medium tracking-[-0.015em] text-neutral-900 tabular-nums">
+            <p className="font-display shrink-0 pt-1 text-[1.05rem] font-medium tracking-[-0.015em] text-neutral-900 tabular-nums">
               $499
             </p>
           </div>
 
-          <dl className="mt-7 flex flex-col gap-3 border-t border-neutral-900/10 pt-6 font-sans text-[0.88rem]">
+          <dl
+            className="rise mt-7 flex flex-col gap-3 border-t border-neutral-900/10 pt-6 font-sans text-[0.88rem]"
+            style={{ "--i": 2 }}
+          >
             <div className="flex justify-between">
               <dt className="text-neutral-500">Subtotal</dt>
               <dd className="text-neutral-900 tabular-nums">$499</dd>
@@ -145,11 +176,14 @@ export default function Checkout() {
           </dl>
 
           {/* Slide To Order Component */}
-          <div className="mt-8 pt-1">
-            <SlideToOrder onComplete={() => setPlaced(true)} />
+          <div className="rise mt-10" style={{ "--i": 3 }}>
+            <SlideToOrder onComplete={handleComplete} />
           </div>
 
-          <ul className="font-sans mt-8 flex flex-col gap-2 text-[0.82rem] text-neutral-500">
+          <ul
+            className="rise font-sans mt-6 flex flex-col gap-2 text-[0.82rem] text-neutral-500"
+            style={{ "--i": 4 }}
+          >
             <li className="flex items-center gap-2">
               <Tick />
               Free two-day shipping
@@ -165,24 +199,24 @@ export default function Checkout() {
           </ul>
         </div>
 
-        <footer className="font-sans mt-14 border-t border-neutral-900/10 pt-6 text-[0.7rem] tracking-[0.02em] text-neutral-400">
+        <footer className="font-sans mt-14 border-t border-neutral-900/10 pt-6 text-[0.7rem] tracking-[0.02em] text-neutral-500">
           HUSH is a fictional brand. No payment is processed and no card details
           leave this page.
         </footer>
-      </div>
+      </main>
 
-      {/* Success Popup Modal */}
-      {placed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/60 backdrop-blur-md animate-fade">
-          <div className="flex flex-col items-center max-w-sm w-full p-8 bg-white border border-neutral-900/10 rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] animate-pop">
-            
-            {/* Animated Tick Circle */}
-            <div className="relative flex items-center justify-center w-20 h-20 mb-6 bg-[#5B6CFF]/10 rounded-full">
-              <svg 
-                className="w-10 h-10 text-[#5B6CFF]" 
-                fill="none" 
-                viewBox="0 0 24 24"
-              >
+      {/* Confirmation dialog */}
+      {open && (
+        <div className="animate-fade fixed inset-0 z-50 flex items-center justify-center bg-white/60 p-4 backdrop-blur-md">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-confirmed-title"
+            className="animate-pop flex w-full max-w-sm flex-col items-center rounded-[2rem] border border-neutral-900/10 bg-white p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)]"
+          >
+            {/* Animated tick circle */}
+            <div className="relative mb-6 flex size-20 items-center justify-center rounded-full bg-[#5B6CFF]/10">
+              <svg className="size-10 text-[#5B6CFF]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   className="animate-draw stroke-current stroke-[2.5]"
                   strokeLinecap="round"
@@ -192,21 +226,34 @@ export default function Checkout() {
                 />
               </svg>
             </div>
-            
-            <h3 className="font-display text-2xl font-medium tracking-[-0.02em] text-neutral-900 mb-2">
-              Order Confirmed
-            </h3>
-            
-            <p className="font-sans text-center text-[0.92rem] leading-relaxed text-neutral-500 mb-8">
-              Order <span className="font-medium text-neutral-900">H1-8842</span> has been placed. We&apos;ve sent a receipt to your email.
-            </p>
-            
-            <button
-              onClick={() => setPlaced(false)}
-              className="w-full py-4 px-6 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl font-display font-medium text-[0.95rem] transition-colors duration-200 active:scale-[0.98]"
+
+            <h2
+              id="order-confirmed-title"
+              className="font-display mb-2 text-2xl font-medium tracking-[-0.02em] text-neutral-900"
             >
-              Continue Shopping
-            </button>
+              Order confirmed
+            </h2>
+
+            <p className="font-sans text-center text-[0.92rem] leading-relaxed text-neutral-500">
+              Order{" "}
+              <span className="font-medium text-neutral-900">H1-8842</span>{" "}
+              has been placed. We&apos;ve sent a receipt to your email.
+            </p>
+
+            <div className="font-sans mt-6 mb-8 flex w-full items-baseline justify-between border-t border-neutral-900/10 pt-4 text-[0.88rem]">
+              <span className="text-neutral-500">Hush H1, Midnight</span>
+              <span className="font-display font-medium text-neutral-900 tabular-nums">$539</span>
+            </div>
+
+            {/* Real navigation. The old button only closed the dialog and left
+                the slider locked on a finished order with nowhere to go. */}
+            <Link
+              ref={cta}
+              href="/"
+              className="font-display block w-full rounded-xl bg-neutral-900 px-6 py-4 text-center text-[0.95rem] font-medium text-white transition-colors duration-200 hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5B6CFF]"
+            >
+              Continue shopping
+            </Link>
           </div>
         </div>
       )}
